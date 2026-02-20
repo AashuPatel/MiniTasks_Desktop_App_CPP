@@ -1,16 +1,32 @@
 # MiniTasks
 
+[![Download Installer](https://img.shields.io/badge/Download-MiniTasks_Installer-blue?style=for-the-badge&logo=windows)](./Downloadable_App/MiniTasks-1.0.0-win64.exe)
+
 MiniTasks is an ultra-minimalistic, high-performance desktop task tracker built for Windows using C++ and Qt6. It features a transparent, glassmorphic UI, a floating task trigger, and synchronous plain-text local storage for determinism and speed.
 
 ## Core Features
 
-- **Draggable Floating Trigger Widget:** A frameless, transparent, "always-on-top" trigger button that rests unobtrusively on the screen edge and can be dragged to any custom location, persisting across restarts via `QSettings`.
-- **Custom Animated SVG Icon:** The trigger utilizes Qt's SVG rendering to natively draw a complex animated SVG "bubble" without relying on bloated web views.
-- **Glassmorphic Task Popup:** A sleek, transparent dark-mode UI with no Windows click-through bugs, native drop-shadows suppressed (`Qt::NoDropShadowWindowHint`), and hidden scrollbars (`Qt::ScrollBarAlwaysOff`) for a clean aesthetic.
-- **Hover-Driven Interactions:** Elegant hover logic for deleting tasks, and a grow-effect for active focus.
-- **Inline Modal Editing:** Click any task to open a clean overlay modal to read and edit long-form text.
-- **Zero External Dependencies:** Relies entirely on native C++ standard library structures (`std::vector`, `std::fstream`) and the core Qt6 UI framework.
-- **Self-Generating Executable Icons:** An embedded `IconGenerator` automatically parses SVGs and compiles native `.ico` bundled resources during the CMake phase.
+### UI
+* **Glassmorphic Popup**
+  `Dark Mode` + `No Drop Shadows` + `Hidden Scrollbars`
+* **Custom SVG Trigger**
+  Natively renders a complex animated SVG "bubble" without web views.
+* **Inline Editing**
+  Clean overlay modal for reading/editing long-form text.
+
+### UX
+* **Draggable Trigger**
+  Moves anywhere on screen. Position persists across restarts via `QSettings`.
+* **Hover-Driven Actions**
+  Hover to reveal delete buttons; grow-effect highlights active focus.
+* **Click-Through Protected**
+  Custom paint events prevent Windows "invisible window" bugs.
+
+### Architecture & Build
+* **Zero Dependencies**
+  Pure native C++ (`std::vector`, `std::fstream`) + core Qt6 toolkit.
+* **Self-Generating Executables**
+  `[icon.svg]` → `[IconGenerator]` → `[app.ico]` → `[.exe]` 
 
 ## Application Architecture Flow
 
@@ -60,9 +76,25 @@ graph TD
 
 ## Implementation Details
 
-- **Window Management & DWM:** The application avoids the common invisible-window click-through bugs in Windows by explicitly overriding the Qt `paintEvent` and manually filling the background instead of relying purely on `.setStyleSheet`. DWM Blur was intentionally removed from specific overlay widgets (like the SVG wrapper) to preserve crisp alpha-transparency boundaries without native Windows acrylic blurring artifacts.
-- **Asset Compilation:** Because Windows shortcuts (`.lnk`) require native `.ico` references, the build process injects a custom step to compile an `IconGenerator` utility first. This utility turns the raw `icon.svg` into multi-layer bitmap `.ico` files and attaches them to the `.exe` via an `app.rc` Windows resource file before CPack builds the final installer payload.
-- **Safe Storage Handling:** `TaskStorage.cpp` forces the use of fully-qualified AppData directories (via `QStandardPaths::AppDataLocation`) to avoid Windows permission rejections when attempting to execute standard file streams against the relative executable path.
+### 1. Window Management & DWM
+- **Problem:** Transparent windows trigger invisible "click-through" bugs in Windows.
+- **Solution:** 
+  - Override Qt `paintEvent`
+  - Manually fill background
+  - Suppress native blur (`DWM Blur`) to keep SVG alpha clean
+  - Disable DWM shadows (`Qt::NoDropShadowWindowHint`)
+
+### 2. Asset Compilation
+- **Problem:** Windows shortcuts (`.lnk`) require native `.ico` files, but we only have `icon.svg`.
+- **Flow:**
+  `[icon.svg]` → `[IconGenerator.exe]` → `[app.ico]` → `[app.rc]` → `[MiniTasks.exe]`
+- **Solution:** CMake builds an `IconGenerator` utility first, converts the SVG, and bundles it natively.
+
+### 3. Safe Storage Handling
+- **Problem:** Writing files next to `.exe` triggers Windows UAC Permission Denied errors.
+- **Flow:**
+  `[UI Save Request]` → `[QStandardPaths]` → `[C:\Users\...\AppData\Roaming\MiniTasks\tasks.txt]`
+- **Solution:** `TaskStorage.cpp` routes all synchronous streams to the user's private AppData directory.
 
 ## Complete Installation & Build Guide (Windows)
 
