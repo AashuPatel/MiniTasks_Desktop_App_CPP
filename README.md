@@ -151,3 +151,12 @@ Once the CPack command completes successfully, it will generate a file named `Mi
 1. Double-click `MiniTasks-1.0.0-win64.exe` to run the installer.
 2. Follow the NSIS installation wizard.
 3. Launch "MiniTasks" from your Desktop shortcut or Start Menu!
+
+
+# OG_Dev_Commands
+``` 
+taskkill /F /IM MiniTasks.exe                      
+```
+```
+cmake .. && cmake --build . --config Release && cpack -G NSIS -C Release
+```

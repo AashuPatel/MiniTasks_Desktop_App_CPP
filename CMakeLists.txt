@@ -56,8 +56,9 @@ endif()
 
 # CPack NSIS Setup Installer Configuration
 set(CPACK_PACKAGE_NAME "MiniTasks")
-set(CPACK_PACKAGE_VENDOR "Developer")
+set(CPACK_PACKAGE_VENDOR "https://github.com/AashuPatel/")
 set(CPACK_PACKAGE_VERSION "1.0.0")
+set(CPACK_RESOURCE_FILE_LICENSE "${CMAKE_CURRENT_SOURCE_DIR}/LICENSE.txt")
 set(CPACK_PACKAGE_DESCRIPTION_SUMMARY "Minimal, predictable task list.")
 set(CPACK_PACKAGE_ICON "${CMAKE_CURRENT_SOURCE_DIR}\\\\app.ico")
 set(CPACK_GENERATOR "NSIS")
