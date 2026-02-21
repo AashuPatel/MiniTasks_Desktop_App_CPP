@@ -3,6 +3,7 @@
 #include <QStyleOption>
 #include <QDateTime>
 #include <algorithm>
+#include "AnalogClock.h"
 
 SidePanel::SidePanel(QWidget *parent)
     : QWidget(parent)
@@ -52,7 +53,10 @@ SidePanel::SidePanel(QWidget *parent)
     m_scheduleList->setVerticalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
     m_scheduleList->setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
     
-    layout->addWidget(m_scheduleList);
+    layout->addWidget(m_scheduleList, 1);
+
+    auto* clock = new AnalogClock(this);
+    layout->addWidget(clock, 0, Qt::AlignHCenter | Qt::AlignBottom);
 
     connect(m_scheduleList, &QListWidget::itemClicked, this, [this](QListWidgetItem* item) {
         bool ok;

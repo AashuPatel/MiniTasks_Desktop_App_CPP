@@ -34,6 +34,7 @@ add_executable(MiniTasks
     src/TaskEditModal.cpp include/TaskEditModal.h
     src/TaskPopup.cpp include/TaskPopup.h
     src/SidePanel.cpp include/SidePanel.h
+    src/AnalogClock.cpp include/AnalogClock.h
     src/FloatingButton.cpp include/FloatingButton.h
     src/utils/SmartParser.cpp include/utils/SmartParser.h
 )

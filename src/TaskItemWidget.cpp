@@ -9,8 +9,8 @@ TaskItemWidget::TaskItemWidget(const QString& text, int index, bool isCompleted,
     setObjectName("TaskItem");
     
     // Default glassy styling
-    QString bgAlpha = isCompleted ? "0.02" : (isUrgent ? "0.85" : "0.05");
-    QString bgHoverAlpha = isCompleted ? "0.05" : (isUrgent ? "0.95" : "0.15");
+    QString bgAlpha = isCompleted ? "0.02" : (isUrgent ? "0.15" : "0.05");
+    QString bgHoverAlpha = isCompleted ? "0.05" : (isUrgent ? "0.25" : "0.15");
     QString borderColor = isCompleted ? "rgba(255, 255, 255, 0.3)" : (isUrgent ? "rgba(129, 140, 248, 0.9)" : "rgba(255, 255, 255, 0.72)");
     QString hoverBorderColor = isCompleted ? "rgba(255, 255, 255, 0.4)" : (isUrgent ? "rgba(165, 180, 252, 1.0)" : "rgba(255, 255, 255, 0.82)");
     QString backgroundColor = isUrgent ? QString("rgba(79, 70, 229, %1)").arg(bgAlpha) : QString("rgba(255, 255, 255, %1)").arg(bgAlpha);
