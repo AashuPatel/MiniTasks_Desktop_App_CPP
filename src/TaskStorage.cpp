@@ -6,6 +6,8 @@
 #include <QStandardPaths>
 #include <QDir>
 #include <QCoreApplication>
+#include <QDateTime>
+#include "utils/SmartParser.h"
 
 TaskStorage::TaskStorage()
 {
@@ -24,6 +26,7 @@ void saveInternal(const QString& filename, const std::vector<TaskItem>& tasks)
         QJsonObject obj;
         obj["text"] = t.text;
         obj["isCompleted"] = t.isCompleted;
+        obj["alarmTime"] = t.alarmTime;
         array.append(obj);
     }
 
@@ -55,7 +58,8 @@ std::vector<TaskItem> TaskStorage::load()
                 QJsonObject obj = val.toObject();
                 tasks.push_back({
                     obj["text"].toString(),
-                    obj["isCompleted"].toBool()
+                    obj["isCompleted"].toBool(),
+                    static_cast<qint64>(obj["alarmTime"].toDouble(0))
                 });
             }
         }
@@ -68,8 +72,9 @@ void TaskStorage::add(const QString& task)
 {
     if (task.trimmed().isEmpty()) return;
 
+    auto parsed = SmartParser::parse(task.trimmed());
     auto tasks = load();
-    tasks.push_back({ task.trimmed(), false });
+    tasks.push_back({ parsed.cleanText, false, parsed.alarmTime });
     saveInternal(m_filename, tasks);
 }
 
@@ -81,7 +86,9 @@ void TaskStorage::update(int index, const QString& newText)
     if (index < 0 || static_cast<size_t>(index) >= tasks.size())
         return;
 
-    tasks[index].text = newText;
+    auto parsed = SmartParser::parse(newText.trimmed());
+    tasks[index].text = parsed.cleanText;
+    tasks[index].alarmTime = parsed.alarmTime;
     saveInternal(m_filename, tasks);
 }
 
@@ -93,6 +100,21 @@ void TaskStorage::setCompleted(int index, bool completed)
 
     tasks[index].isCompleted = completed;
     saveInternal(m_filename, tasks);
+}
+
+void TaskStorage::snooze(int index)
+{
+    auto tasks = load();
+    if (index < 0 || static_cast<size_t>(index) >= tasks.size())
+        return;
+
+    if (tasks[index].alarmTime > 0) {
+        // Add 30 minutes (30 * 60 * 1000 = 1800000 ms) to the existing alarm or current time if expired
+        qint64 now = QDateTime::currentMSecsSinceEpoch();
+        qint64 baseTime = std::max(tasks[index].alarmTime, now);
+        tasks[index].alarmTime = baseTime + 1800000LL;
+        saveInternal(m_filename, tasks);
+    }
 }
 
 void TaskStorage::remove(int index)

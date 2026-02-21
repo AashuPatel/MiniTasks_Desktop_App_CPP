@@ -2,36 +2,40 @@
 #include <QHBoxLayout>
 #include <QMouseEvent>
 
-TaskItemWidget::TaskItemWidget(const QString& text, int index, bool isCompleted, QWidget *parent)
-    : QWidget(parent), m_index(index), m_isCompleted(isCompleted)
+TaskItemWidget::TaskItemWidget(const QString& text, int index, bool isCompleted, bool isUrgent, QWidget *parent)
+    : QWidget(parent), m_index(index), m_isCompleted(isCompleted), m_isUrgent(isUrgent)
 {
     setAttribute(Qt::WA_StyledBackground, true);
     setObjectName("TaskItem");
     
-    // Dim the entire item if it is completed
-    QString baseAlpha = isCompleted ? "0.02" : "0.05";
-    QString hoverAlpha = isCompleted ? "0.05" : "0.15";
-    QString borderAlpha = isCompleted ? "0.3" : "0.72";
-    QString hoverBorderAlpha = isCompleted ? "0.4" : "0.82";
+    // Default glassy styling
+    QString bgAlpha = isCompleted ? "0.02" : (isUrgent ? "0.85" : "0.05");
+    QString bgHoverAlpha = isCompleted ? "0.05" : (isUrgent ? "0.95" : "0.15");
+    QString borderColor = isCompleted ? "rgba(255, 255, 255, 0.3)" : (isUrgent ? "rgba(129, 140, 248, 0.9)" : "rgba(255, 255, 255, 0.72)");
+    QString hoverBorderColor = isCompleted ? "rgba(255, 255, 255, 0.4)" : (isUrgent ? "rgba(165, 180, 252, 1.0)" : "rgba(255, 255, 255, 0.82)");
+    QString backgroundColor = isUrgent ? QString("rgba(79, 70, 229, %1)").arg(bgAlpha) : QString("rgba(255, 255, 255, %1)").arg(bgAlpha);
+    QString backgroundHoverColor = isUrgent ? QString("rgba(79, 70, 229, %1)").arg(bgHoverAlpha) : QString("rgba(255, 255, 255, %1)").arg(bgHoverAlpha);
+    
     QString textStyle = isCompleted ? "color: rgba(255, 255, 255, 0.4); text-decoration: line-through;" : "color: white;";
+    if (isUrgent && !isCompleted) textStyle += " font-weight: bold;";
 
     setStyleSheet(QString(R"(
         #TaskItem {
-            background: rgba(255, 255, 255, %1);
-            border: 1px solid rgba(255, 255, 255, %2);
+            background: %1;
+            border: 1px solid %2;
             border-radius: 8px;
             margin: 2px 4px;
         }
         #TaskItem:hover {
-            background: rgba(255, 255, 255, %3);
-            border: 1px solid rgba(255, 255, 255, %4);
+            background: %3;
+            border: 1px solid %4;
             margin: 0px 2px;
         }
-    )").arg(baseAlpha, borderAlpha, hoverAlpha, hoverBorderAlpha));
+    )").arg(backgroundColor, borderColor, backgroundHoverColor, hoverBorderColor));
 
     auto* layout = new QHBoxLayout(this);
     layout->setContentsMargins(8, 4, 8, 4);
-    layout->setSpacing(8);
+    layout->setSpacing(4);
 
     m_fullText = text;
     QString displayText = text;
@@ -55,6 +59,15 @@ TaskItemWidget::TaskItemWidget(const QString& text, int index, bool isCompleted,
     m_doneBtn->setCursor(Qt::PointingHandCursor);
     m_doneBtn->hide(); // Hidden by default
 
+    m_snoozeBtn = new QPushButton("zZ", this);
+    m_snoozeBtn->setFixedSize(24, 24);
+    m_snoozeBtn->setStyleSheet(
+        "QPushButton { color: rgba(255, 255, 255, 0.6); background: transparent; border: none; font-size: 14px; font-weight: bold; margin-bottom: 2px; }"
+        "QPushButton:hover { color: rgba(165, 180, 252, 1); }"
+    );
+    m_snoozeBtn->setCursor(Qt::PointingHandCursor);
+    m_snoozeBtn->hide(); // Hidden by default
+
     m_deleteBtn = new QPushButton("✕", this);
     m_deleteBtn->setFixedSize(24, 24);
     // Minimalistic styling for the delete button
@@ -65,9 +78,22 @@ TaskItemWidget::TaskItemWidget(const QString& text, int index, bool isCompleted,
     m_deleteBtn->setCursor(Qt::PointingHandCursor);
     m_deleteBtn->hide(); // Hidden by default
 
-    layout->addWidget(m_label);
-    layout->addWidget(m_doneBtn);
-    layout->addWidget(m_deleteBtn);
+    auto* btnLayout = new QHBoxLayout();
+    btnLayout->setContentsMargins(0, 4, 0, 0);
+    btnLayout->setSpacing(4);
+    if (isUrgent) {
+        btnLayout->addWidget(m_snoozeBtn);
+    }
+    btnLayout->addWidget(m_doneBtn);
+    btnLayout->addWidget(m_deleteBtn);
+
+    layout->addWidget(m_label, 1);
+    layout->addLayout(btnLayout);
+    btnLayout->setAlignment(Qt::AlignRight | Qt::AlignTop);
+
+    connect(m_snoozeBtn, &QPushButton::clicked, this, [this]() {
+        emit snoozeRequested(m_index);
+    });
 
     connect(m_doneBtn, &QPushButton::clicked, this, [this]() {
         emit doneRequested(m_index, !m_isCompleted); // Toggle
@@ -81,6 +107,7 @@ TaskItemWidget::TaskItemWidget(const QString& text, int index, bool isCompleted,
 void TaskItemWidget::enterEvent(QEnterEvent *event)
 {
     QWidget::enterEvent(event);
+    if (m_isUrgent) m_snoozeBtn->show();
     m_doneBtn->show();
     m_deleteBtn->show();
 }
@@ -88,6 +115,7 @@ void TaskItemWidget::enterEvent(QEnterEvent *event)
 void TaskItemWidget::leaveEvent(QEvent *event)
 {
     QWidget::leaveEvent(event);
+    if (m_isUrgent) m_snoozeBtn->hide();
     m_doneBtn->hide();
     m_deleteBtn->hide();
 }

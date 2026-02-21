@@ -9,11 +9,13 @@
 #include "TaskEditModal.h"
 #include <QFont>
 #include <QFontMetrics>
+#include <QDateTime>
+#include <QTimer>
 
 TaskPopup::TaskPopup(QWidget *parent)
     : QWidget(parent)
 {
-    setWindowFlags(Qt::Popup | Qt::FramelessWindowHint | Qt::NoDropShadowWindowHint);
+    setWindowFlags(Qt::Tool | Qt::FramelessWindowHint | Qt::NoDropShadowWindowHint);
     setAttribute(Qt::WA_TranslucentBackground);
 
     setFixedSize(300, 400);
@@ -78,9 +80,27 @@ void TaskPopup::reloadTasks(const std::vector<TaskItem>& tasks)
     QFont font;
     font.setPixelSize(14);
     QFontMetrics fm(font);
+    
+    qint64 now = QDateTime::currentMSecsSinceEpoch();
 
-    for (const auto& task : tasks)
+    // Create a mutable copy to sort
+    std::vector<TaskItem> sortedTasks = tasks;
+    
+    // Stable sort: Urgent (uncompleted + expired alarm) > Uncompleted > Completed
+    std::stable_sort(sortedTasks.begin(), sortedTasks.end(), [now](const TaskItem& a, const TaskItem& b) {
+        bool aUrgent = !a.isCompleted && a.alarmTime > 0 && now >= a.alarmTime;
+        bool bUrgent = !b.isCompleted && b.alarmTime > 0 && now >= b.alarmTime;
+        
+        if (aUrgent && !bUrgent) return true;
+        if (!aUrgent && bUrgent) return false;
+        if (!a.isCompleted && b.isCompleted) return true;
+        if (a.isCompleted && !b.isCompleted) return false;
+        return false; // Preserve original order otherwise
+    });
+
+    for (const auto& task : sortedTasks)
     {
+        bool isUrgent = !task.isCompleted && task.alarmTime > 0 && now >= task.alarmTime;
         auto* item = new QListWidgetItem(m_taskList);
         
         QString displayText = task.text;
@@ -101,13 +121,50 @@ void TaskPopup::reloadTasks(const std::vector<TaskItem>& tasks)
         
         m_taskList->addItem(item);
 
-        auto* widget = new TaskItemWidget(task.text, index, task.isCompleted, this);
+        // Map visual index back to the real storage index by finding the text match
+        // Since text is the only unique identifier we have in tasks.json right now
+        int realIndex = -1;
+        for (size_t i = 0; i < tasks.size(); ++i) {
+            if (tasks[i].text == task.text && tasks[i].isCompleted == task.isCompleted && tasks[i].alarmTime == task.alarmTime) {
+                realIndex = static_cast<int>(i);
+                break;
+            }
+        }
+
+        auto* widget = new TaskItemWidget(task.text, realIndex, task.isCompleted, isUrgent, this);
         connect(widget, &TaskItemWidget::deleteRequested, this, &TaskPopup::taskDeleted);
         connect(widget, &TaskItemWidget::doneRequested, this, &TaskPopup::taskDone);
+        connect(widget, &TaskItemWidget::snoozeRequested, this, &TaskPopup::taskSnoozed);
         connect(widget, &TaskItemWidget::editRequested, this, &TaskPopup::onTaskEditRequested);
         m_taskList->setItemWidget(item, widget);
         
         index++;
+    }
+}
+
+void TaskPopup::scrollToTask(int targetIndex)
+{
+    // We must find the visual item representing the real tasks.json index
+    for (int i = 0; i < m_taskList->count(); ++i) {
+        QListWidgetItem* item = m_taskList->item(i);
+        auto* widget = qobject_cast<TaskItemWidget*>(m_taskList->itemWidget(item));
+        
+        if (widget && widget->getIndex() == targetIndex) {
+            m_taskList->scrollToItem(item, QAbstractItemView::PositionAtCenter);
+            
+            // Trigger 1-second SkyBlue flash
+            QString originalStyle = widget->styleSheet();
+            widget->setStyleSheet(originalStyle + R"(
+                #TaskItem { border: 2px solid rgba(135, 206, 235, 1); }
+            )");
+            
+            QTimer::singleShot(1000, widget, [widget, originalStyle]() {
+                if (widget) {
+                    widget->setStyleSheet(originalStyle);
+                }
+            });
+            break;
+        }
     }
 }
 
@@ -165,4 +222,15 @@ void TaskPopup::hideEvent(QHideEvent *event)
 {
     QWidget::hideEvent(event);
     emit popupHidden();
+}
+
+bool TaskPopup::event(QEvent *e)
+{
+    if (e->type() == QEvent::WindowDeactivate) {
+        QWidget* active = QApplication::activeWindow();
+        if (!active || (active != this && !this->isAncestorOf(active) && active->objectName() != "SidePanelWindow")) {
+            hide();
+        }
+    }
+    return QWidget::event(e);
 }

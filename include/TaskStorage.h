@@ -7,6 +7,7 @@
 struct TaskItem {
     QString text;
     bool isCompleted;
+    qint64 alarmTime = 0; // Epoch milliseconds, 0 if not an alarm
 };
 
 class TaskStorage
@@ -17,6 +18,7 @@ public:
     void add(const QString& task);
     void update(int index, const QString& newText);
     void setCompleted(int index, bool completed);
+    void snooze(int index);
     void remove(int index);
 
 private:

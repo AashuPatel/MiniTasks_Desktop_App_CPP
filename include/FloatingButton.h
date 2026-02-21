@@ -5,6 +5,7 @@
 #include <QMouseEvent>
 #include <QPaintEvent>
 #include <QSvgWidget>
+#include <QTimer>
 #include "TaskPopup.h"
 #include "TaskStorage.h"
 #include "SidePanel.h"
@@ -28,17 +29,22 @@ private slots:
     void handleTaskAdded(const QString& task);
     void handleTaskDeleted(int index);
     void handleTaskDone(int index, bool completed);
+    void handleTaskSnoozed(int index);
     void handleTaskEdited(int index, const QString& newText);
+    void checkAlarms();
 
 private:
     void repositionPopup();
     void togglePopup();
+    void updateSvgState(bool urgent);
 
     TaskPopup* m_popup;
     SidePanel* m_sidePanel;
     TaskStorage m_storage;
     QSvgWidget* m_svgWidget;
+    QTimer* m_alarmTimer;
     qint64 m_lastPopupHideTime = 0;
+    bool m_isAlarmUrgent = false;
     
     // Dragging state
     bool m_isDragging = false;

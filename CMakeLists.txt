@@ -11,28 +11,31 @@ set(CMAKE_AUTORCC ON)
 
 find_package(Qt6 REQUIRED COMPONENTS Core Gui Widgets Svg SvgWidgets)
 
-add_executable(IconGenerator icon_generator.cpp)
+add_executable(IconGenerator assets/icon_generator.cpp)
 target_link_libraries(IconGenerator PRIVATE Qt6::Core Qt6::Gui Qt6::Widgets Qt6::Svg Qt6::SvgWidgets)
 
 add_custom_command(
-    OUTPUT ${CMAKE_CURRENT_SOURCE_DIR}/app.ico
+    OUTPUT ${CMAKE_CURRENT_SOURCE_DIR}/assets/app.ico
     COMMAND ${CMAKE_COMMAND} -E env "PATH=C:/Qt/6.6.0/msvc2019_64/bin;$ENV{PATH}" $<TARGET_FILE:IconGenerator>
-    DEPENDS IconGenerator ${CMAKE_CURRENT_SOURCE_DIR}/icon.svg
-    WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
+    DEPENDS IconGenerator ${CMAKE_CURRENT_SOURCE_DIR}/assets/icon.svg
+    WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/assets
     COMMENT "Generating app.ico from icon.svg"
 )
 
-add_custom_target(GenerateIcon DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/app.ico)
+add_custom_target(GenerateIcon DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/assets/app.ico)
+
+include_directories(include)
 
 add_executable(MiniTasks
-    main.cpp
-    app.rc
-    TaskStorage.h TaskStorage.cpp
-    TaskItemWidget.h TaskItemWidget.cpp
-    TaskEditModal.h TaskEditModal.cpp
-    TaskPopup.h TaskPopup.cpp
-    SidePanel.h SidePanel.cpp
-    FloatingButton.h FloatingButton.cpp
+    src/main.cpp
+    assets/app.rc
+    src/TaskStorage.cpp include/TaskStorage.h
+    src/TaskItemWidget.cpp include/TaskItemWidget.h
+    src/TaskEditModal.cpp include/TaskEditModal.h
+    src/TaskPopup.cpp include/TaskPopup.h
+    src/SidePanel.cpp include/SidePanel.h
+    src/FloatingButton.cpp include/FloatingButton.h
+    src/utils/SmartParser.cpp include/utils/SmartParser.h
 )
 
 add_dependencies(MiniTasks GenerateIcon)
@@ -61,22 +64,24 @@ set(CPACK_PACKAGE_VENDOR "https://github.com/AashuPatel/")
 set(CPACK_PACKAGE_VERSION "1.0.0")
 set(CPACK_RESOURCE_FILE_LICENSE "${CMAKE_CURRENT_SOURCE_DIR}/LICENSE.txt")
 set(CPACK_PACKAGE_DESCRIPTION_SUMMARY "Minimal, predictable task list.")
-set(CPACK_PACKAGE_ICON "${CMAKE_CURRENT_SOURCE_DIR}\\\\app.ico")
+set(CPACK_PACKAGE_ICON "${CMAKE_CURRENT_SOURCE_DIR}\\\\assets\\\\app.ico")
 set(CPACK_GENERATOR "NSIS")
 
 set(CPACK_NSIS_DISPLAY_NAME "MiniTasks Desktop App")
-set(CPACK_NSIS_MUI_ICON "${CMAKE_CURRENT_SOURCE_DIR}\\\\app.ico")
+set(CPACK_NSIS_MUI_ICON "${CMAKE_CURRENT_SOURCE_DIR}\\\\assets\\\\app.ico")
 set(CPACK_NSIS_COMPRESSOR "/SOLID lzma")
 
-# Tell NSIS to create a Start Menu shortcut and a Desktop shortcut pointing to the executable in the 'bin' folder
+# Tell NSIS to create a Start Menu shortcut, Desktop shortcut, and a Startup folder shortcut for auto-boot.
 set(CPACK_NSIS_CREATE_ICONS_EXTRA "
   CreateShortCut \\\"$SMPROGRAMS\\\\$STARTMENU_FOLDER\\\\MiniTasks.lnk\\\" \\\"$INSTDIR\\\\bin\\\\MiniTasks.exe\\\"
   CreateShortCut \\\"$DESKTOP\\\\MiniTasks.lnk\\\" \\\"$INSTDIR\\\\bin\\\\MiniTasks.exe\\\"
+  CreateShortCut \\\"$SMSTARTUP\\\\MiniTasks.lnk\\\" \\\"$INSTDIR\\\\bin\\\\MiniTasks.exe\\\"
 ")
 
 set(CPACK_NSIS_DELETE_ICONS_EXTRA "
   Delete \\\"$SMPROGRAMS\\\\$START_MENU\\\\MiniTasks.lnk\\\"
   Delete \\\"$DESKTOP\\\\MiniTasks.lnk\\\"
+  Delete \\\"$SMSTARTUP\\\\MiniTasks.lnk\\\"
 ")
 
 include(CPack)

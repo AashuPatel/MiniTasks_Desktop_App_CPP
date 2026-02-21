@@ -16,11 +16,13 @@ class TaskPopup : public QWidget
 public:
     explicit TaskPopup(QWidget *parent = nullptr);
     void reloadTasks(const std::vector<TaskItem>& tasks);
+    void scrollToTask(int targetIndex);
 
 signals:
     void taskAdded(const QString& task);
     void taskDeleted(int index);
     void taskDone(int index, bool completed);
+    void taskSnoozed(int index);
     void taskEdited(int index, const QString& newText);
     void popupHidden();
 
@@ -28,6 +30,7 @@ protected:
     void keyPressEvent(QKeyEvent *event) override;
     void paintEvent(QPaintEvent *event) override;
     void hideEvent(QHideEvent *event) override;
+    bool event(QEvent *event) override;
 
 private slots:
     void onReturnPressed();
