@@ -7,17 +7,20 @@
 #include <QVBoxLayout>
 #include <QPaintEvent>
 
+#include "TaskStorage.h"
+
 class TaskPopup : public QWidget
 {
     Q_OBJECT
 
 public:
     explicit TaskPopup(QWidget *parent = nullptr);
-    void reloadTasks(const std::vector<QString>& tasks);
+    void reloadTasks(const std::vector<TaskItem>& tasks);
 
 signals:
     void taskAdded(const QString& task);
     void taskDeleted(int index);
+    void taskDone(int index, bool completed);
     void taskEdited(int index, const QString& newText);
     void popupHidden();
 

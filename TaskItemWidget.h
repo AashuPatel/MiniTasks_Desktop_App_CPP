@@ -10,11 +10,12 @@ class TaskItemWidget : public QWidget
     Q_OBJECT
 
 public:
-    explicit TaskItemWidget(const QString& text, int index, QWidget *parent = nullptr);
+    explicit TaskItemWidget(const QString& text, int index, bool isCompleted, QWidget *parent = nullptr);
     int getIndex() const { return m_index; }
 
 signals:
     void deleteRequested(int index);
+    void doneRequested(int index, bool isCompleted);
     void editRequested(int index, const QString& text);
 
 protected:
@@ -24,8 +25,10 @@ protected:
 
 private:
     int m_index;
+    bool m_isCompleted;
     QString m_fullText;
     QLabel *m_label;
+    QPushButton *m_doneBtn;
     QPushButton *m_deleteBtn;
 };
 

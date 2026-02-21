@@ -7,6 +7,8 @@
 #include <QListWidgetItem>
 #include <QEnterEvent>
 #include "TaskEditModal.h"
+#include <QFont>
+#include <QFontMetrics>
 
 TaskPopup::TaskPopup(QWidget *parent)
     : QWidget(parent)
@@ -68,18 +70,40 @@ TaskPopup::TaskPopup(QWidget *parent)
     connect(m_inputField, &QLineEdit::returnPressed, this, &TaskPopup::onReturnPressed);
 }
 
-void TaskPopup::reloadTasks(const std::vector<QString>& tasks)
+void TaskPopup::reloadTasks(const std::vector<TaskItem>& tasks)
 {
     m_taskList->clear();
     int index = 0;
+    
+    QFont font;
+    font.setPixelSize(14);
+    QFontMetrics fm(font);
+
     for (const auto& task : tasks)
     {
         auto* item = new QListWidgetItem(m_taskList);
-        item->setSizeHint(QSize(m_taskList->width(), 36)); // Fixed height for rows
+        
+        QString displayText = task.text;
+        if (displayText.length() > 90) {
+            displayText = displayText.left(86) + "...";
+        }
+        
+        // Physically simulate word-wrapping across the 188px label bounds
+        int textH = fm.boundingRect(0, 0, 188, 0, Qt::TextWordWrap, displayText).height();
+        
+        int computedHeight = 38; // 1 line default
+        if (textH > 40) {
+            computedHeight = 84; // 3+ lines mapped
+        } else if (textH > 20) {
+            computedHeight = 60; // 2 lines mapped
+        }
+        item->setSizeHint(QSize(0, computedHeight));
+        
         m_taskList->addItem(item);
 
-        auto* widget = new TaskItemWidget(task, index, this);
+        auto* widget = new TaskItemWidget(task.text, index, task.isCompleted, this);
         connect(widget, &TaskItemWidget::deleteRequested, this, &TaskPopup::taskDeleted);
+        connect(widget, &TaskItemWidget::doneRequested, this, &TaskPopup::taskDone);
         connect(widget, &TaskItemWidget::editRequested, this, &TaskPopup::onTaskEditRequested);
         m_taskList->setItemWidget(item, widget);
         

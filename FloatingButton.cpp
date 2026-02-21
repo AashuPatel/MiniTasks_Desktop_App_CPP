@@ -98,19 +98,25 @@ FloatingButton::FloatingButton(QWidget *parent)
     m_svgWidget->setStyleSheet("background: transparent; border: none;");
 
     m_popup = new TaskPopup();
+    m_sidePanel = new SidePanel();
     
     // Connect popup signals to logic
     connect(m_popup, &TaskPopup::taskAdded, this, &FloatingButton::handleTaskAdded);
     connect(m_popup, &TaskPopup::taskDeleted, this, &FloatingButton::handleTaskDeleted);
+    connect(m_popup, &TaskPopup::taskDone, this, &FloatingButton::handleTaskDone);
     connect(m_popup, &TaskPopup::taskEdited, this, &FloatingButton::handleTaskEdited);
     
     // Qt::Popup hides automatically on focus loss (like clicking the button).
     // Track when it hides so toggle doesn't immediately reopen it.
     connect(m_popup, &TaskPopup::popupHidden, this, [this]() {
         m_lastPopupHideTime = QDateTime::currentMSecsSinceEpoch();
+        if (m_sidePanel->isVisible()) {
+            m_sidePanel->hide();
+        }
     });
 
     m_popup->winId(); // Ensure window handler is created for blur logic
+    m_sidePanel->winId();
     
     // Apply blur to popup as well
     HWND hwndFallback = (HWND)m_popup->winId();
@@ -120,6 +126,15 @@ FloatingButton::FloatingButton(QWidget *parent)
         bb.fEnable = true;
         bb.hRgnBlur = NULL;
         DwmEnableBlurBehindWindow(hwndFallback, &bb);
+    }
+    
+    HWND hwndSide = (HWND)m_sidePanel->winId();
+    if (hwndSide) {
+        DWM_BLURBEHIND bb = {0};
+        bb.dwFlags = DWM_BB_ENABLE;
+        bb.fEnable = true;
+        bb.hRgnBlur = NULL;
+        DwmEnableBlurBehindWindow(hwndSide, &bb);
     }
 
     // Load saved position or use default
@@ -141,6 +156,7 @@ FloatingButton::FloatingButton(QWidget *parent)
 FloatingButton::~FloatingButton()
 {
     m_popup->deleteLater();
+    m_sidePanel->deleteLater();
 }
 
 void FloatingButton::repositionPopup()
@@ -156,6 +172,13 @@ void FloatingButton::repositionPopup()
         if (popupY + m_popup->height() > availableGeometry.bottom()) popupY = y() - m_popup->height() - 16; // Spawn above button if at bottom
 
         m_popup->move(popupX, popupY);
+        
+        int gap = 8;
+        int sideX = popupX - m_sidePanel->width() - gap;
+        if (sideX < availableGeometry.left()) {
+            sideX = popupX + m_popup->width() + gap; // fallback to right side if no room on left
+        }
+        m_sidePanel->move(sideX, popupY);
     }
 }
 
@@ -203,6 +226,7 @@ void FloatingButton::mouseMoveEvent(QMouseEvent *event)
         // Hide the popup while dragging if it is visible to be smooth
         if (m_popup->isVisible()) {
             m_popup->hide();
+            m_sidePanel->hide();
         }
     }
     QWidget::mouseMoveEvent(event);
@@ -229,10 +253,12 @@ void FloatingButton::togglePopup()
 {
     if (m_popup->isVisible()) {
         m_popup->hide();
+        m_sidePanel->hide();
     } else {
         auto tasks = m_storage.load();
         m_popup->reloadTasks(tasks);
         repositionPopup(); // Guarantee exact position before showing
+        m_sidePanel->show(); // Show side panel first so popup takes focus afterwards
         m_popup->show();
     }
 }
@@ -260,6 +286,13 @@ void FloatingButton::handleTaskDeleted(int index)
 void FloatingButton::handleTaskEdited(int index, const QString& newText)
 {
     m_storage.update(index, newText);
+    auto tasks = m_storage.load();
+    m_popup->reloadTasks(tasks);
+}
+
+void FloatingButton::handleTaskDone(int index, bool completed)
+{
+    m_storage.setCompleted(index, completed);
     auto tasks = m_storage.load();
     m_popup->reloadTasks(tasks);
 }

@@ -31,6 +31,7 @@ add_executable(MiniTasks
     TaskItemWidget.h TaskItemWidget.cpp
     TaskEditModal.h TaskEditModal.cpp
     TaskPopup.h TaskPopup.cpp
+    SidePanel.h SidePanel.cpp
     FloatingButton.h FloatingButton.cpp
 )
 
